@@ -1,17 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import UserRegistrationView, UserProfileView, HealthProfileViewSet
+from .views import UserProfileView, HealthProfileViewSet, sync_user
 
 router = DefaultRouter()
 router.register(r'health-profile', HealthProfileViewSet,
                 basename='health-profile')
 
 urlpatterns = [
-    # Authentication
-    path('register/', UserRegistrationView.as_view(), name='user-register'),
-    path('login/', TokenObtainPairView.as_view(), name='token-obtain'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    # Firebase Authentication
+    path('sync/', sync_user, name='sync-user'),
 
     # User profile
     path('profile/', UserProfileView.as_view(), name='user-profile'),

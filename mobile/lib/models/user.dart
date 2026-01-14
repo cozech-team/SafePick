@@ -1,3 +1,5 @@
+import 'health_profile.dart';
+
 class User {
   final String id;
   final String username;

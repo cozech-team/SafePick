@@ -23,12 +23,18 @@ dependencies:
     # Local Storage
     shared_preferences: ^2.2.2
 
-    # Authentication
-    flutter_secure_storage: ^9.0.0
-    jwt_decoder: ^2.0.1
+    # Firebase
+    firebase_core: ^3.8.1
+    firebase_auth: ^5.3.3
+    google_sign_in: ^6.2.1
+    sign_in_with_apple: ^6.1.2
+
+    # Camera & ML
+    camera: ^0.11.3
+    google_ml_kit: ^0.20.0
 
     # Barcode Scanning
-    mobile_scanner: ^3.5.5
+    mobile_scanner: ^7.1.4
 
     # Image Handling
     image_picker: ^1.0.7
@@ -36,12 +42,13 @@ dependencies:
 
     # UI Utilities
     flutter_svg: ^2.0.9
-    intl: ^0.18.1
+    flutter_spinkit: ^5.2.0
+    intl: ^0.20.2
 
 dev_dependencies:
     flutter_test:
         sdk: flutter
-    flutter_lints: ^3.0.0
+    flutter_lints: ^6.0.0
 
 flutter:
     uses-material-design: true

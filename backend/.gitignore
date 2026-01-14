@@ -45,3 +45,9 @@ db.sqlite3-journal
 # OS
 .DS_Store
 Thumbs.db
+
+# Firebase & Credentials
+firebase-credentials.json
+*.json
+!google-services.json
+!GoogleService-Info.plist
