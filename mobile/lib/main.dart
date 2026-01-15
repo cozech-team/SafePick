@@ -52,7 +52,7 @@ class SafePickApp extends StatelessWidget {
           ),
         ),
         themeMode: ThemeMode.system,
-        initialRoute: '/login',
+        home: const AuthWrapper(),
         routes: {
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
@@ -70,5 +70,26 @@ class SafePickApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+
+    if (!authService.isInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return authService.isAuthenticated
+        ? const HomeScreen()
+        : const LoginScreen();
   }
 }

@@ -25,9 +25,11 @@ class AuthService extends ChangeNotifier {
 
   app_user.User? _currentUser;
   bool _isAuthenticated = false;
+  bool _isInitialized = false;
 
   app_user.User? get currentUser => _currentUser;
   bool get isAuthenticated => _isAuthenticated;
+  bool get isInitialized => _isInitialized;
   firebase_auth.User? get firebaseUser => _firebaseAuth.currentUser;
 
   AuthService() {
@@ -52,6 +54,9 @@ class AuthService extends ChangeNotifier {
     if (user != null) {
       await _updateUserFromFirebase(user);
     }
+
+    _isInitialized = true;
+    notifyListeners();
   }
 
   // Update local user from Firebase user
@@ -70,8 +75,8 @@ class AuthService extends ChangeNotifier {
     _isAuthenticated = true;
     notifyListeners();
 
-    // Sync with backend
-    await _syncWithBackend();
+    // Sync with backend (don't await to avoid blocking UI)
+    _syncWithBackend();
   }
 
   // Sync user with backend
