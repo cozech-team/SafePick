@@ -9,7 +9,7 @@ import '../models/user.dart' as app_user;
 class AuthService extends ChangeNotifier {
   static String get baseUrl {
     // Production backend on Render
-    return 'https://safepick.onrender.com/api';
+    return 'https://safepick-1.onrender.com/api';
 
     // For local development, uncomment and use one of these:
     // if (kIsWeb) return 'http://localhost:8000/api';  // Web

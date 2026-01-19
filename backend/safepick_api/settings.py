@@ -17,7 +17,7 @@ SECRET_KEY = config(
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.4').split(',')
+    'ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.4,safepick-1.onrender.com').split(',')
 
 # Application definition
 INSTALLED_APPS = [
