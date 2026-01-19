@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'dart:io';
 import '../services/camera_service.dart';
+import '../services/analysis_service.dart';
+import 'analysis_results_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -12,9 +14,11 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   final CameraService _cameraService = CameraService();
+  final AnalysisService _analysisService = AnalysisService();
   bool _isInitializing = true;
   String? _errorMessage;
   XFile? _capturedImage;
+  bool _isAnalyzing = false;
 
   @override
   void initState() {
@@ -64,11 +68,44 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
-  void _analyzeImage() {
-    // TODO: Implement image analysis with backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Analysis feature coming soon!')),
-    );
+  Future<void> _analyzeImage() async {
+    if (_capturedImage == null) return;
+
+    setState(() {
+      _isAnalyzing = true;
+    });
+
+    try {
+      final result =
+          await _analysisService.analyzeIngredients(_capturedImage!.path);
+
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+
+        // Navigate to results screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnalysisResultsScreen(result: result),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error analyzing image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -182,11 +219,32 @@ class _CameraScreenState extends State<CameraScreen> {
         Expanded(
           child: Container(
             color: Colors.black,
-            child: Center(
-              child: Image.file(
-                File(_capturedImage!.path),
-                fit: BoxFit.contain,
-              ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.file(
+                  File(_capturedImage!.path),
+                  fit: BoxFit.contain,
+                ),
+                if (_isAnalyzing)
+                  Container(
+                    color: Colors.black54,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Analyzing ingredients...',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -203,7 +261,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _retakePicture,
+                    onPressed: _isAnalyzing ? null : _retakePicture,
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retake'),
                     style: OutlinedButton.styleFrom(
@@ -214,7 +272,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed: _analyzeImage,
+                    onPressed: _isAnalyzing ? null : _analyzeImage,
                     icon: const Icon(Icons.analytics),
                     label: const Text('Analyze'),
                     style: FilledButton.styleFrom(

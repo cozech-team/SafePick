@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.camera_alt_outlined),
             selectedIcon: Icon(Icons.camera_alt),
-            label: 'Scan',
+            label: 'Capture',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

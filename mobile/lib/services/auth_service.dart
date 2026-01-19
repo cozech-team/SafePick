@@ -8,16 +8,13 @@ import '../models/user.dart' as app_user;
 
 class AuthService extends ChangeNotifier {
   static String get baseUrl {
-    // For Web: use localhost
-    if (kIsWeb) return 'http://localhost:8000/api';
+    // Production backend on Render
+    return 'https://safepick.onrender.com/api';
 
-    // For Android Emulator: use 10.0.2.2 (special alias for host machine)
-    // For Physical Device: use your computer's local IP address
-    // Make sure your phone and computer are on the same WiFi network
-
-    // IP address from ipconfig: 192.168.1.4
-    // To find your IP: Run 'ipconfig' in terminal and look for IPv4 Address
-    return 'http://192.168.1.4:8000/api';
+    // For local development, uncomment and use one of these:
+    // if (kIsWeb) return 'http://localhost:8000/api';  // Web
+    // return 'http://10.0.2.2:8000/api';  // Android Emulator
+    // return 'http://192.168.1.4:8000/api';  // Physical Device
   }
 
   final firebase_auth.FirebaseAuth _firebaseAuth =

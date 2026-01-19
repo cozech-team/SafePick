@@ -7,11 +7,19 @@ from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials, initialize_app
 from django.conf import settings
 import os
+import json
+import base64
+import google.generativeai as genai
+from PIL import Image
+import io
 from .models import HealthProfile
 from .serializers import (
     UserSerializer,
     HealthProfileSerializer
 )
+
+# Configure Gemini AI
+genai.configure(api_key=settings.GEMINI_API_KEY)
 
 # Initialize Firebase Admin SDK
 try:
@@ -186,3 +194,112 @@ class HealthProfileViewSet(viewsets.ModelViewSet):
                 {'error': 'Product not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+@api_view(['POST'])
+def analyze_ingredients(request):
+    """
+    Analyze product ingredients from an image using Gemini AI
+
+    POST /api/users/analyze-ingredients/
+    Headers: Authorization: Bearer <firebase_token>
+    Body: multipart/form-data with 'image' file
+
+    Returns:
+    {
+        "safety_score": 7,
+        "good_ingredients": ["Water", "Vitamin C"],
+        "bad_ingredients": ["High Fructose Corn Syrup", "Artificial Colors"],
+        "explanation": "This product contains some concerning ingredients..."
+    }
+    """
+    # Check if image is provided
+    if 'image' not in request.FILES:
+        return Response(
+            {'error': 'Image file is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Get the uploaded image
+        image_file = request.FILES['image']
+
+        # Open and process the image
+        image = Image.open(image_file)
+
+        # Convert image to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+
+        # Create Gemini model
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # Create the prompt for ingredient analysis
+        prompt = """
+        Analyze the ingredients shown in this product image. Provide a detailed analysis with:
+        
+        1. A safety score from 1-10 (10 being the safest)
+        2. List of GOOD ingredients (healthy, natural, beneficial)
+        3. List of BAD ingredients (unhealthy, artificial, potentially harmful)
+        4. A brief explanation of the overall product safety
+        
+        Return ONLY a valid JSON object in this exact format:
+        {
+            "safety_score": <number 1-10>,
+            "good_ingredients": ["ingredient1", "ingredient2"],
+            "bad_ingredients": ["ingredient1", "ingredient2"],
+            "explanation": "<brief explanation>"
+        }
+        
+        If you cannot read the ingredients clearly, return a safety_score of 0 and explain in the explanation field.
+        """
+
+        # Generate response from Gemini
+        response = model.generate_content([prompt, image])
+
+        # Parse the response
+        response_text = response.text.strip()
+
+        # Remove markdown code blocks if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+
+        response_text = response_text.strip()
+
+        # Parse JSON response
+        try:
+            analysis_result = json.loads(response_text)
+        except json.JSONDecodeError:
+            # If JSON parsing fails, try to extract information
+            return Response({
+                'safety_score': 5,
+                'good_ingredients': [],
+                'bad_ingredients': [],
+                'explanation': 'Could not parse ingredient analysis. Please try again with a clearer image.'
+            })
+
+        # Validate the response structure
+        if 'safety_score' not in analysis_result:
+            analysis_result['safety_score'] = 5
+        if 'good_ingredients' not in analysis_result:
+            analysis_result['good_ingredients'] = []
+        if 'bad_ingredients' not in analysis_result:
+            analysis_result['bad_ingredients'] = []
+        if 'explanation' not in analysis_result:
+            analysis_result['explanation'] = 'Analysis completed.'
+
+        return Response(analysis_result, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error analyzing ingredients: {e}")
+        return Response(
+            {
+                'error': 'Failed to analyze ingredients',
+                'details': str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
