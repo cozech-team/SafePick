@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../services/api_service.dart';
-import '../models/product.dart';
-import '../widgets/product_card.dart';
+import 'camera_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,35 +11,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ApiService _apiService = ApiService();
-  List<Product> _recentProducts = [];
-  bool _isLoading = true;
   int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRecentProducts();
-  }
-
-  Future<void> _loadRecentProducts() async {
-    setState(() => _isLoading = true);
-    final products = await _apiService.getProducts();
-    setState(() {
-      _recentProducts = products;
-      _isLoading = false;
-    });
-  }
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
-
     switch (index) {
       case 0:
-        // Home - already here
+        // Already on home
         break;
       case 1:
-        Navigator.pushNamed(context, '/scan');
+        // Navigate to camera screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CameraScreen()),
+        ).then((_) {
+          // Reset to home tab when returning from camera
+          setState(() => _selectedIndex = 0);
+        });
         break;
       case 2:
         Navigator.pushNamed(context, '/profile');
@@ -51,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
+    final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
 
     return Scaffold(
@@ -67,57 +53,45 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadRecentProducts,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
+        onRefresh: () async {
+          // TODO: Implement refresh
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            Card(
+              child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome, ${user?.username ?? 'User'}!',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Scan products to check ingredient safety',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton.icon(
-                            onPressed: () =>
-                                Navigator.pushNamed(context, '/scan'),
-                            icon: const Icon(Icons.qr_code_scanner),
-                            label: const Text('Scan Product'),
-                          ),
-                        ],
-                      ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome, ${user?.name ?? 'User'}!',
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Recent Products',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  if (_recentProducts.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Text('No products found'),
-                      ),
-                    )
-                  else
-                    ..._recentProducts.map(
-                      (product) => ProductCard(product: product),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your SafePick app is ready',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                ],
+                  ],
+                ),
               ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Coming Soon',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text('Features will be added here'),
+              ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -129,8 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.qr_code_scanner_outlined),
-            selectedIcon: Icon(Icons.qr_code_scanner),
+            icon: Icon(Icons.camera_alt_outlined),
+            selectedIcon: Icon(Icons.camera_alt),
             label: 'Scan',
           ),
           NavigationDestination(

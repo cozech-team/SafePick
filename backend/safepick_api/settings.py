@@ -17,7 +17,7 @@ SECRET_KEY = config(
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+    'ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.4').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -35,7 +35,6 @@ INSTALLED_APPS = [
 
     # Local apps
     'users',
-    'analysis',
 ]
 
 MIDDLEWARE = [
@@ -128,10 +127,12 @@ REST_FRAMEWORK = {
 
 
 # CORS Settings
+# Allow all localhost origins for development (Flutter web uses dynamic ports)
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in debug mode
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080'
-).split(',')
+).split(',') if not DEBUG else []
 
 CORS_ALLOW_CREDENTIALS = True
 

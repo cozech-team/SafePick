@@ -33,7 +33,6 @@ urlpatterns = [
 
     # API endpoints
     path('api/users/', include('users.urls')),
-    path('api/analysis/', include('analysis.urls')),
 ]
 
 if settings.DEBUG:

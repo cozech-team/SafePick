@@ -4,9 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/scan_screen.dart';
-import 'screens/product_detail_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/camera_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -56,17 +55,8 @@ class SafePickApp extends StatelessWidget {
         routes: {
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
-          '/scan': (context) => const ScanScreen(),
+          '/camera': (context) => const CameraScreen(),
           '/profile': (context) => const ProfileScreen(),
-        },
-        onGenerateRoute: (settings) {
-          if (settings.name == '/product-detail') {
-            final productId = settings.arguments as String;
-            return MaterialPageRoute(
-              builder: (context) => ProductDetailScreen(productId: productId),
-            );
-          }
-          return null;
         },
       ),
     );

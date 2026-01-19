@@ -41,4 +41,5 @@ class User {
   }
 
   String get fullName => '$firstName $lastName'.trim();
+  String get name => fullName.isEmpty ? username : fullName;
 }
