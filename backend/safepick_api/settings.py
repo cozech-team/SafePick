@@ -3,7 +3,6 @@ Django settings for safepick_api project.
 """
 
 import dj_database_url
-from users.firebase_init import initialize_firebase
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
