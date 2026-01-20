@@ -1,7 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'auth_service.dart';
 
 class ApiService {
+  final AuthService _authService;
+
+  ApiService(this._authService);
+
   static String get baseUrl {
     // Production backend on Render
     return 'https://safepick-1.onrender.com/api';
@@ -13,9 +17,8 @@ class ApiService {
   }
 
   // Get headers with authentication token
-  Future<Map<String, String>> _getHeaders() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final token = await user?.getIdToken();
+  Future<Map<String, String>> getHeaders() async {
+    final token = await _authService.getIdToken();
 
     return {
       'Content-Type': 'application/json',

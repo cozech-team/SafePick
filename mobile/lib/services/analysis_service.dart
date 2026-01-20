@@ -1,22 +1,24 @@
 import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/analysis_result.dart';
 import 'auth_service.dart';
 import 'dart:convert';
 
 class AnalysisService {
+  final AuthService _authService;
+
+  AnalysisService(this._authService);
+
   static String get baseUrl => AuthService.baseUrl;
 
   /// Analyze ingredients from an image
   Future<AnalysisResult> analyzeIngredients(String imagePath) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      if (!_authService.isAuthenticated) {
         throw Exception('User not authenticated');
       }
 
-      final token = await user.getIdToken();
+      final token = await _authService.getIdToken();
       if (token == null) {
         throw Exception('Failed to get authentication token');
       }
