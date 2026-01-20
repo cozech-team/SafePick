@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart' as app_user;
 
 class AuthService extends ChangeNotifier {
@@ -17,8 +17,6 @@ class AuthService extends ChangeNotifier {
     // return 'http://192.168.1.4:8000/api';  // Physical Device
   }
 
-  final firebase_auth.FirebaseAuth _firebaseAuth =
-      firebase_auth.FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb
         ? '819106507078-i1u1uq5lvv929tu29htm8ga4psd691lh.apps.googleusercontent.com'
@@ -29,11 +27,11 @@ class AuthService extends ChangeNotifier {
   app_user.User? _currentUser;
   bool _isAuthenticated = false;
   bool _isInitialized = false;
+  String? _idToken;
 
   app_user.User? get currentUser => _currentUser;
   bool get isAuthenticated => _isAuthenticated;
   bool get isInitialized => _isInitialized;
-  firebase_auth.User? get firebaseUser => _firebaseAuth.currentUser;
 
   AuthService() {
     init();
@@ -41,45 +39,78 @@ class AuthService extends ChangeNotifier {
 
   // Initialize and check if user is logged in
   Future<void> init() async {
-    // Listen to Firebase auth state changes
-    _firebaseAuth.authStateChanges().listen((firebase_auth.User? user) {
-      if (user != null) {
-        _updateUserFromFirebase(user);
-      } else {
-        _currentUser = null;
-        _isAuthenticated = false;
-        notifyListeners();
-      }
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('id_token');
+    final userJson = prefs.getString('user');
 
-    // Check if user is already signed in
-    final user = _firebaseAuth.currentUser;
-    if (user != null) {
-      await _updateUserFromFirebase(user);
+    if (token != null && userJson != null) {
+      _idToken = token;
+      final userData = json.decode(userJson);
+      _currentUser = app_user.User.fromJson(userData);
+      _isAuthenticated = true;
     }
 
     _isInitialized = true;
     notifyListeners();
   }
 
-  // Update local user from Firebase user
-  Future<void> _updateUserFromFirebase(firebase_auth.User firebaseUser) async {
-    _currentUser = app_user.User(
-      id: firebaseUser.uid,
-      username: firebaseUser.displayName ??
-          firebaseUser.email?.split('@')[0] ??
-          'user',
-      email: firebaseUser.email ?? '',
-      firstName: firebaseUser.displayName?.split(' ').first ?? '',
-      lastName: (firebaseUser.displayName?.split(' ').length ?? 0) > 1
-          ? firebaseUser.displayName!.split(' ').last
-          : '',
-    );
-    _isAuthenticated = true;
-    notifyListeners();
+  // Get ID token for backend authentication
+  Future<String?> getIdToken() async {
+    return _idToken;
+  }
 
-    // Sync with backend (don't await to avoid blocking UI)
-    _syncWithBackend();
+  // Google Sign-In
+  Future<bool> signInWithGoogle() async {
+    try {
+      // Trigger Google Sign-In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        print('Google Sign-In cancelled by user');
+        return false;
+      }
+
+      // Obtain auth details
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Use Google ID token directly (no Firebase!)
+      _idToken = googleAuth.idToken;
+
+      if (_idToken == null) {
+        print('Failed to get Google ID token');
+        return false;
+      }
+
+      // Create user from Google account
+      _currentUser = app_user.User(
+        id: googleUser.id,
+        username: googleUser.email.split('@')[0],
+        email: googleUser.email,
+        firstName: googleUser.displayName?.split(' ').first ?? '',
+        lastName: (googleUser.displayName?.split(' ').length ?? 0) > 1
+            ? googleUser.displayName!.split(' ').last
+            : '',
+      );
+
+      _isAuthenticated = true;
+
+      // Save to local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('id_token', _idToken!);
+      await prefs.setString('user', json.encode(_currentUser!.toJson()));
+
+      notifyListeners();
+
+      // Sync with backend
+      await _syncWithBackend();
+
+      print('Google Sign-In successful: ${googleUser.email}');
+      return true;
+    } catch (e) {
+      print('Google Sign-In error: $e');
+      return false;
+    }
   }
 
   // Sync user with backend
@@ -110,57 +141,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Get Firebase ID token for backend authentication
-  Future<String?> getIdToken() async {
-    try {
-      final user = _firebaseAuth.currentUser;
-      if (user != null) {
-        return await user.getIdToken();
-      }
-      return null;
-    } catch (e) {
-      print('Error getting ID token: $e');
-      return null;
-    }
-  }
-
-  // Google Sign-In
-  Future<bool> signInWithGoogle() async {
-    try {
-      // Trigger Google Sign-In flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        print('Google Sign-In cancelled by user');
-        return false;
-      }
-
-      // Obtain auth details
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      // Create Firebase credential
-      final credential = firebase_auth.GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the credential
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
-
-      if (userCredential.user != null) {
-        print('Google Sign-In successful: ${userCredential.user?.email}');
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      print('Google Sign-In error: $e');
-      return false;
-    }
-  }
-
   // Apple Sign-In
   Future<bool> signInWithApple() async {
     try {
@@ -172,34 +152,41 @@ class AuthService extends ChangeNotifier {
         ],
       );
 
-      // Create Firebase credential
-      final oAuthProvider = firebase_auth.OAuthProvider('apple.com');
-      final credential = oAuthProvider.credential(
-        idToken: appleCredential.identityToken,
-        accessToken: appleCredential.authorizationCode,
+      // Use Apple identity token directly
+      _idToken = appleCredential.identityToken;
+
+      if (_idToken == null) {
+        print('Failed to get Apple ID token');
+        return false;
+      }
+
+      // Create user from Apple credential
+      final displayName =
+          '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'
+              .trim();
+
+      _currentUser = app_user.User(
+        id: appleCredential.userIdentifier ?? '',
+        username: appleCredential.email?.split('@')[0] ?? 'user',
+        email: appleCredential.email ?? '',
+        firstName: appleCredential.givenName ?? '',
+        lastName: appleCredential.familyName ?? '',
       );
 
-      // Sign in to Firebase with the credential
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
+      _isAuthenticated = true;
 
-      // Update display name if provided (Apple only provides this on first sign-in)
-      if (appleCredential.givenName != null ||
-          appleCredential.familyName != null) {
-        final displayName =
-            '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'
-                .trim();
-        if (displayName.isNotEmpty) {
-          await userCredential.user?.updateDisplayName(displayName);
-        }
-      }
+      // Save to local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('id_token', _idToken!);
+      await prefs.setString('user', json.encode(_currentUser!.toJson()));
 
-      if (userCredential.user != null) {
-        print('Apple Sign-In successful: ${userCredential.user?.email}');
-        return true;
-      }
+      notifyListeners();
 
-      return false;
+      // Sync with backend
+      await _syncWithBackend();
+
+      print('Apple Sign-In successful: ${appleCredential.email}');
+      return true;
     } catch (e) {
       print('Apple Sign-In error: $e');
       return false;
@@ -210,9 +197,15 @@ class AuthService extends ChangeNotifier {
   Future<void> logout() async {
     try {
       await _googleSignIn.signOut();
-      await _firebaseAuth.signOut();
+
+      // Clear local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('id_token');
+      await prefs.remove('user');
+
       _currentUser = null;
       _isAuthenticated = false;
+      _idToken = null;
       notifyListeners();
       print('User logged out successfully');
     } catch (e) {
@@ -220,30 +213,28 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Refresh token (Firebase handles this automatically)
+  // Refresh token (not needed without Firebase)
   Future<bool> refreshToken() async {
-    try {
-      final user = _firebaseAuth.currentUser;
-      if (user != null) {
-        await user.getIdToken(true); // Force refresh
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Token refresh error: $e');
-      return false;
-    }
+    // Google tokens are long-lived, no refresh needed
+    return true;
   }
 
   // Delete account
   Future<bool> deleteAccount() async {
     try {
-      final user = _firebaseAuth.currentUser;
-      if (user != null) {
-        await user.delete();
-        _currentUser = null;
-        _isAuthenticated = false;
-        notifyListeners();
+      final token = await getIdToken();
+      if (token == null) return false;
+
+      // Call backend to delete account
+      final response = await http.delete(
+        Uri.parse('$baseUrl/users/delete/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await logout();
         return true;
       }
       return false;
