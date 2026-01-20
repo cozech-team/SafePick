@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import '../services/camera_service.dart';
 import '../services/analysis_service.dart';
+import '../services/auth_service.dart';
 import 'analysis_results_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -14,7 +16,7 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   final CameraService _cameraService = CameraService();
-  final AnalysisService _analysisService = AnalysisService();
+  late final AnalysisService _analysisService;
   bool _isInitializing = true;
   String? _errorMessage;
   XFile? _capturedImage;
@@ -23,6 +25,7 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
+    _analysisService = AnalysisService(context.read<AuthService>());
     _initializeCamera();
   }
 
