@@ -164,6 +164,3 @@ CACHES = {
         'TIMEOUT': 60 * 60 * 24 * 30,  # 30 days
     }
 }
-
-# Initialize Firebase Admin SDK
-initialize_firebase()
