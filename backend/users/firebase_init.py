@@ -10,12 +10,21 @@ def initialize_firebase():
         # Check if running on Render (production)
         firebase_creds_json = os.getenv('FIREBASE_CREDENTIALS_JSON')
 
+        print(
+            f"DEBUG: FIREBASE_CREDENTIALS_JSON exists: {firebase_creds_json is not None}")
+        print(
+            f"DEBUG: FIREBASE_CREDENTIALS_JSON length: {len(firebase_creds_json) if firebase_creds_json else 0}")
+
         if firebase_creds_json:
             # Production: Use environment variable
-            cred_dict = json.loads(firebase_creds_json)
-            cred = credentials.Certificate(cred_dict)
-            firebase_admin.initialize_app(cred)
-            print("Firebase initialized from environment variable")
+            try:
+                cred_dict = json.loads(firebase_creds_json)
+                cred = credentials.Certificate(cred_dict)
+                firebase_admin.initialize_app(cred)
+                print("Firebase initialized from environment variable")
+            except Exception as e:
+                print(f"ERROR initializing Firebase from env var: {e}")
+                raise
         else:
             # Development: Use service account file
             cred_path = os.path.join(os.path.dirname(
