@@ -10,3 +10,4 @@ python-dotenv
 requests
 drf-spectacular
 psycopg2-binary
+gunicorn
